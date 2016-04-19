@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>6502 Microprocessor Simulator</title>
+    <!-- 6502 Microprocessor Assembler & Simulator -->
+    <!-- Copyright 2016 Kevin Kasson -->
+    <!-- -->
+    <!-- This software is provided for educational use only.  Reproduction or modification of any kind is forbidden without the permission of the author. -->
+    <!-- -->
+    <!-- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. -->
+    <!-- -->
+    <link rel="stylesheet" href="6502sim.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
+  </head>
+<body>
+<div id="container">
+  <br /><br />
+<div id="left" class="column">
+  Assembly Code Input:<br />
+  <textarea id="inputbox" rows="24" style="width: 95%; resize: vertical;">	LDX #0
+print	LDA hello,X
+	BEQ finished
+	INX
+	OUT
+	JMP print
+	LDA #252
+
+finished
+	HLT
+
+.org $8000
+hello:	.db "Hello world!",0
+</textarea>
+  <br />
+  <span style="font-family: monospace;">
+  <input type="button" onClick="assembleProgram();" value="Assemble" />
+  <input type="button" onClick="dumpMachineCode();" value="View Hex" />
+  <input type="button" onClick="dumpMachineCode(true);" value="View Binary" />
+  <input type="button" onClick="execute();" value="Run!" />
+  <input type="checkbox" id="debugCheck" onClick="debugOn=!debugOn;"/>Debug
+  </span>
+</div>
+
+
+<div id="center" class="column">
+  Output:
+    <div id="textAmber" style="width: 12px; height: 12px; background-color: #111111; color: #FFF000; border: 1px solid black; display: inline-block; cursor: pointer; text-align: center;"><span style="display: inline-block; transform: translateY(-20%);">&squf;</span></div>
+    <div id="textGreen" style="width: 12px; height: 12px; background-color: #111111; color: #00FF00; border: 1px solid black; display: inline-block; cursor: pointer; text-align: center;"><span style="display: inline-block; transform: translateY(-20%);">&squf;</span></div>
+    <div id="textGray" style="width: 12px; height: 12px; background-color: #111111; color: #C0C0C0; border: 1px solid black; display: inline-block; cursor: pointer; text-align: center;"><span style="display: inline-block; transform: translateY(-20%);">&squf;</span></div>
+    <div id="textBlack" style="width: 12px; height: 12px; background-color: #FFFFFF; color: #000000; border: 1px solid black; display: inline-block; cursor: pointer; text-align: center;"><span style="display: inline-block; transform: translateY(-20%);">&squf;</span></div>
+  <br />
+  <div id="output"></div>
+  <canvas width="160" height="120" id="canvas"></canvas>
+  <br />
+  <span style="font-family: monospace;">
+    Keyboard:
+    <input type="radio" name="key" id="keymemorymapped" checked />Memory Mapped
+    <input type="radio" name="key" id="keymaskableinterrupt" />Maskable Interrupt<br />
+    &nbsp;&nbsp;&nbsp;Mouse:
+    <input type="radio" name="mouse" id="mousememorymapped" checked />Memory Mapped
+    <input type="radio" name="mouse" id="mousemaskableinterrupt" />Maskable Interrupt<br />
+  </span>
+  <br />
+  <span>Simulator Status:<span style="float: right;"><input type="checkbox" onClick="verbose=!verbose;"><small>Verbose &nbsp;&nbsp;</small></span></span>
+  <div id="statuswindow"></div>
+  <br />
+  <div class="debugBox"><span style="text-align: center; font-size: larger;">Processor Status:</span><br />
+  Processor flags: NV-BDIZC &nbsp; &nbsp; PC: <span id="debugPC">$0800</span> A: <span id="debugA">$00</span> X: <span id="debugX">$00</span><br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span id="debugFlags">00010000</span> &nbsp; &nbsp; &nbsp; &nbsp; Y: <span id="debugY">$00</span> SP: <span id="debugSP">$ff</span>
+  </div>
+  <br />
+  <div class="debugOptions">
+    Iterations per cycle: <input type="text" id="executionIterations" size="5" value="97"/>
+     Interval: <input type="text" id="executionInterval" size="5" value="0"/>
+    <br />
+    <input type="button" onClick="refreshScript('6502sim.js');" value="Reload JS" />
+    <input type="button" onClick="pauseProgram();" value="Pause Program" />
+  </div>
+</div>
+
+
+
+<div id="right" class="column">
+  <ul class="navList">
+  <li class="navButton navClicked" id="firstButton">6502 Processor Information<br />&nbsp;</li>
+  <li class="navButton" id="secondButton">Assembler & Simulator Documentation</li>
+  <li class="navButton" id="thirdButton">Source Code Examples<br />&nbsp;</li>
+  </ul>
+<div style="clear: both;"><br /></div>
+<div style="overflow: auto; height: 65vh;">
+  <div id="pageOne">
+    The 6502 was an 8-bit microprocessor created by MOS Technology in 1975.<br />
+    <br />
+    Designed to be the first affordable full-featured microprocessor, the 6502 was used in a number of early home computers and video game consoles, including the Apple II, the NES, the Atari 800, and the Commodore 64.<br />
+    <br />
+    The processor has 3 registers: the Accumulator, the X index register and the Y index register.<br />
+    <br />
+    It also implements a 255 byte stack, from $0100 to $01FF.<br />
+    <br />
+    The 6502 uses the following opcodes, all of which are valid in this simulator:<br />
+    ADC - AdD with Carry<br />AND - bitwise AND with accumulator<br />ASL - Arithmetic Shift Left<br />BCC - Branch if Carry Clear<br />BCS - Branch if Carry Set<br />BEQ - Branch if Equal<br />BIT - test BIT<br />BMI - Branch if MInus<br />BNE - Branch if Not Equal<br />BPL - Branch if PLus<br />BRK - BReak<br />BVC - Branch if oVerflow Clear<br />BVS - Branch if oVerflow Set<br />CLC - CLear Carry flag<br />CLD - CLear Decimal flag<br />CLI - CLear Interrupt flag<br />CLV - CLear oVerflow flag<br />CMP - CoMPare with accumulator<br />CPX - ComPare with X register<br />CPY - ComPare with Y register<br />DEC - DECrement memory<br />DEX - DEcrement X register<br />DEY - DEcrement Y register<br />EOR - bitwise Exclusive OR<br />INC - INCrement memory<br />INX - INcrement X register<br />INY - INcrement Y register<br />JMP - JuMP to address<br />JSR - Jump to SubRoutine<br />LDA - LoaD to Accumulator<br />LDX - LoaD to X register<br />LDY - LoaD to Y register<br />LSR - Logical Shift Right<br />NOP - No OPeration.<br />ORA - bitwise OR with Accumulator<br />PHA - PusH Accumulator to stack<br />PHP - PusH Processor flags to stack<br />PLA - PulL from stack to Accumulator<br />PLP - PulL from stack to Processor flags<br />ROL - ROtate Left<br />ROR - ROtate Right<br />RTI - ReTurn from Interrupt<br />RTS - ReTurn from Subroutine<br />SBC - SuBtract with Carry<br />SEC - SEt Carry flag<br />SED - SEt Decimal flag<br />SEI - SEt Interrupt flag<br />STA - STore Accumulator<br />STX - STore X register<br />STY - STore Y register<br />TAX - Transfer Accumulator to X<br />TAY - Transfer Accumulator to Y<br />TSX - Transfer Stack pointer to X<br />TYA - Transfer Y to Accumulator<br /><br />For more information on these opcodes, see any of a number of 6502 processor documentations available elsewhere online.<br /><br />This simulator also adds the following additional codes.  They are explained in the <span style="text-decoration: underline; cursor: pointer;" id="assemblerDocumentationLink">Assembler & Simulator Documentation</span>.<br />HLT<br />IN<br />OUT<br />OUY<br />WAI
+  </div>
+
+  <div id="pageTwo" style="display: none;">
+    This simulator adds the following additional instructions to the 6502:<br />
+    <br />
+    HLT - opcode $02<br />
+    Immediately stops execution of the program.<br />
+    <br />
+    OUT - opcode $F2<br />
+    Outputs the value of the Accumulator to the output area, as an ASCII character.<br />
+    <br />
+    OUY - opcode $FA<br />
+    Similar to OUT, but outputs the a 16-bit value generated from using the Accumulator as the high byte and the Y register as the low byte.  This allows outputting characters with ASCII values greater than 255.<br />
+    <br />
+    IN - opcode $F3<br />
+    Stores in the Accumulator input from a Prompt window.  If the input buffer is empty, the Prompt is shown and the contents are stored in the buffer, followed by a null character (chr 0).  Each subsequent IN instruction loads to the Accumulator the next character from the buffer, until the buffer is empty again.<br />
+    <br />
+    WAI - opcode $F7<br />
+    Pauses program execution and waits for an interrupt.  Can be used in place of an infinite loop.<br /><br />There are source code examples that implement these opcodes in the <span style="text-decoration: underline; cursor: pointer;" id="sourceCodeLink">Source Code</span> page.<br />
+    <br />
+    The simulator supports 2 additional modes of input: memory-mapped devices and maskable interrupts.  Keystrokes and mouse clicks can be set to either mode.<br />
+    <br />
+    When an input device is set to memory-mapped mode, it stores values in certain areas of memory.<br />
+    In memory-mapped mode, the keyboard stores the following values:<br />
+    <br />
+    $06e0 - Set to 1 when the left arrow key is depressed.<br />
+    $06e1 - Set to 1 when the up arrow key is depressed.<br />
+    $06e2 - Set to 1 when the right arrow key is depressed.<br />
+    $06e3 - Set to 1 when the down arrow key is depressed.<br />
+    $06e0 - Set to 1 when the left key is depressed.<br />
+    $06e4 - Set to the corresponding ASCII value when an alpha-numeric character key is depressed, as well as certain symbol keys.<br />
+    $06e5 - Set to 1 when the return key is depressed.<br />
+    <br />
+    In memory-mapped mode, the mouse stores the following values:<br />
+    <br />
+    $06f0 - Set to 1 when the left mouse button is depressed.<br />
+    $06f1 - Set to 1 when the middle mouse button is depressed.<br />
+    $06f2 - Set to 1 when the right mouse button is depressed.<br />
+    <br />
+    In memory-mapped mode, it is the job of the programmer to repeatedly check for input.<br />
+    A loop can be set up to check if the above memory locations are non-zero, and an action is performed if so.<br />
+    The memory location must be reset to zero in the program, it is not done automatically.<br />
+    <br />
+    In maskable interrupt mode, an interrupt is thrown when a keystroke or mouse click is detected.<br />
+    The keyboard stores the JavaScript-type key code of the depressed key in $06e0.<br />
+    The mouse stores the JavaScript-type mouse button code in $06f0.<br />
+    <br />
+    Note that the interrupt-ignore flag is set when the processor is turned on, and must be cleared by a CLI instruction by the programmer before any maskable interrupts will be detected.  When the maskable interrupt is thrown, if the interrupt flag is clear, the processor will read a memory location from the vector at bytes $fffe and $ffff, and jump to that location.  View the <span style="text-decoration: underline; cursor: pointer;" id="sourceCodeLinkSecond">Source Code Examples</span> for more details.<br />
+    <br />
+    The simulator also includes a 160x120 display.  The screen is divided into 4x4 pixels which are mapped to memory locations $0200 to $06af.<br />
+    Pixels are turned on by writing a color to their memory location.  The colors are 8-bit packed values, with bits 0 and 1 representing blue, bits 2 3 and 4 green, and bits 5 6 and 7 red.<br />
+    %01110011 therefore gives a color value of #6C90FF, and writing %01110011 to memory location $0200 will make the upper left pixel blue.<br />
+    <br />
+    Writing any values besides 0 to memory location $06b0 clears the entire screen, and writing to $06b1 activates a beeper.<br />  
+  </div>
+
+<div id="pageThree" style="display: none; font-family: monospace; overflow: hidden; height: 100%">
+<table class="codepagetable" style="border: 0px;">
+<tr>
+<td><span style="cursor: pointer; font-weight: bold;" id="keypressbutton">Key Press Program</span></td>
+<td><span style="cursor: pointer;" id="pixeltestbutton">Pixel Test Program</span></td>
+</tr>
+<tr>
+<td><span style="cursor: pointer;" id="reverselettersbutton">Reverse Letters Program</span></td>
+<td><span style="cursor: pointer;" id="modulobutton">Modulo Routine</span></td>
+</tr>
+<tr>
+<td><span style="cursor: pointer;" id="stringSubroutinebutton">Print String Subroutine</span></td>
+<td></td>
+</tr>
+</table>
+<input type="button" id="loadExamplebutton" value="Load" style="margin-bottom: 6px;" /><br />
+<div id="keypressexamplediv" class="codepage">
+<code id="keypressexample">
+<b><span style="color: #FF0000;">;**This program requires the keyboard be set to maskable interrupt.  Be sure to set the radio button so that the program will operate correctly.**<br /></span></b>
+<br />
+;This program draws some graphics on the screen, and then waits for keyboard input.  Press the corresponding keys, and watch what happens!<br />
+<br />
+keyMem = $06e0 ;This location stores the keyboard input<br />
+aPressed = $70 ;Variable for whether A is currently activated<br />
+sPressed = $71 ;whether S is activated<br />
+dPressed = $72 ;whether D is activated<br />
+turnedOn = $73 ;whether On! is lit up<br />
+<br />
+LDX #2 ;We'll start X at 2 because the first byte stores the color, and the rest store the pixels, but we decrement X at the start of the loop<br />
+LDA screenData ;Load the first pixel location<br />
+drawA:<br />
+DEX<br />
+STA (&lt;screenData,X) ;Store the color at the pixel location<br />
+INX ;Increment X twice to check if the next location is null<br />
+INX<br />
+LDY screenData,X ;We use Y for the comparison because X stores the pointer and A still stores the color.  This is easier than pushing A and pulling it back.<br />
+INX<br />
+CPY #0<br />
+BNE drawA ;If the byte isn't null, we can draw the next pixel<br />
+LDY screenData,X ;Otherwise, we need to check the next pixel<br />
+CPY #0<br />
+BNE drawA<br />
+;If both pixels are null, we can move on.<br />
+<br />
+doneDrawA: ;Now that the A is drawn, we do the same thing for S<br />
+INX ;Move past the null data<br />
+LDA screenData,X ;Load the color for S into A<br />
+INX ;Move past the color<br />
+INX ;And increment X again, because we decrement it during the loop<br />
+drawS ;And draw the S<br />
+DEX<br />
+STA (&lt;screenData,X)<br />
+INX<br />
+INX<br />
+LDY screenData,X<br />
+INX<br />
+CPY #0<br />
+BNE drawS<br />
+LDY screenData,X<br />
+CPY #0<br />
+BNE drawS<br />
+<br />
+doneDrawS: ;And finally we do the same thing for D<br />
+INX ;Move past the null data<br />
+LDA screenData,X ;Load the color into A<br />
+INX ;Move past the color<br />
+INX<br />
+drawD: ;And draw D<br />
+DEX<br />
+STA (&lt;screenData,X)<br />
+INX<br />
+INX<br />
+LDY screenData,X<br />
+INX<br />
+CPY #0<br />
+BNE drawD<br />
+LDY screenData,X<br />
+CPY #0<br />
+BNE drawD<br />
+<br />
+doneDrawD: ;Now we draw the 3 white pixels.<br />
+<br />
+LDA #$ff ;Load white<br />
+STA 997 ;Draw the pixels<br />
+STA 1007<br />
+STA 1017<br />
+CLI ;Allow interrupts<br />
+loop: WAI ;and wait for an interrupt<br />
+;In strict 6502 without a WAIT instruction, we'd just use loop: jmp loop<br />
+<br />
+org $0030<br />
+onData: ;Data for the ON! drawing<br />
+.db 224 ;Color (red)<br />
+.dw 1240,1280,1320,1360,1400,1401,1402,1403,1363,1323,1283,1243,1242,1241,1407,1367,1327,1287,1247,1288,1329,1370,1410,1330,1290,1250,1254,1294,1334,1414,0 ;Pixels locations followed by a null byte<br />
+<br />
+variables:<br />
+.db 0,0,0,0,0<br />
+<br />
+screenData:<br />
+.db 120 ;Color for the A (green)<br />
+.dw 717,756,758,796,797,798,836,838,876,878,0 ;A pixels followed by two Null bytes<br />
+.db 220 ;Color for S (yellow)<br />
+.dw 726,727,728,766,806,807,808,848,886,887,888,0 ;S pixels followed by two Null bytes<br />
+.db 47 ;Color for D (blue)<br />
+.dw 736,737,738,776,778,816,818,856,858,896,897,898,0 ;D pixels followed by two Null bytes<br />
+<br />
+org $fe00<br />
+<br />
+keyboardHandler: ;We received a keyboard input:<br />
+SEI ;Set the interrupt flag until we're done handling this interrupt<br />
+LDA keyMem ;Load the key code into A<br />
+LDY #0<br />
+STY keyMem ;clear out the key press so that we don't get stuck in a loop<br />
+CMP #65 ;Was it the A key?<br />
+BEQ pressedA ;Branch to pressedA if so<br />
+CMP #83 ;Was it the S key?<br />
+BEQ pressedS ;Branch to pressedS if so<br />
+CMP #68 ;Was it the D key?<br />
+BEQ pressedD ;Branch to pressedD if so<br />
+finishInterrupt: ;After handling the interrupt, we'll check whether ON! needs to appear or disappear<br />
+LDA aPressed ;Check if A is pressed<br />
+CMP #0<br />
+BEQ notOn ;And if not, ON! should turn off<br />
+LDA sPressed ;check if S is pressed<br />
+CMP #0<br />
+BEQ notOn ;And if not, ON! should turn off<br />
+LDA dPressed ;check if D is pressed<br />
+CMP #0<br />
+BEQ notOn ;And if not, ON! should turn off<br />
+JMP turnOn ;Otherwise all the buttons are pressed, so ON! should turn on<br />
+notOn: ;Check if ON! needs to turn off<br />
+LDA #0<br />
+CMP turnedOn ;If it's currently on<br />
+BNE turnOff ;We need to turn it off<br />
+JMP done ;Otherwise, we're done with the Interrupt<br />
+<br />
+done:<br />
+CLI ;Allow Interrupts<br />
+RTI ;And jump back to where we were before the Interrupt<br />
+<br />
+<br />
+pressedA: ;We pressed the A key.  Should A turn on or off?<br />
+LDA aPressed<br />
+CMP #0 ;If it's currently off, it needs to turn on<br />
+BEQ pressA<br />
+LDA #0 ;Otherwise, turn it off<br />
+STA aPressed ;Set the variable to zero<br />
+LDA #$ff ;Load white<br />
+STA 997 ;Write white to the pixel location<br />
+JMP finishInterrupt ;and finish the Interrupt<br />
+pressA: ;Turn A on<br />
+LDA #1<br />
+STA aPressed ;Set the variable to 1<br />
+LDA #224 ;Load red<br />
+STA 997 ;And write red to the pixel location<br />
+JMP finishInterrupt ;and finish the Interrupt<br />
+<br />
+pressedS: ;We pressed the S key.  Should S turn on or off?<br />
+LDA sPressed<br />
+CMP #0 ;If it's currently off, it needs to turn on<br />
+BEQ pressS<br />
+LDA #0 ;Otherwise, turn it off<br />
+STA sPressed ;Set the variable to zero<br />
+LDA #$ff ;Load white<br />
+STA 1007 ;Write white to the pixel location<br />
+JMP finishInterrupt ;and finish the Interrupt<br />
+pressS: ;Turn S on<br />
+LDA #1<br />
+STA sPressed ;Set the variable to 1<br />
+LDA #224 ;Load red<br />
+STA 1007 ;And write red to the pixel location<br />
+JMP finishInterrupt ;and finish the Interrupt<br />
+<br />
+<br />
+pressedD: ;We pressed the D key .  Should D turn on or off?<br />
+LDA dPressed<br />
+CMP #0 ;If it's currently off, it needs to turn on<br />
+BEQ pressD<br />
+LDA #0 ;Otherwise, turn it off<br />
+STA dPressed ;Set the variable to zero<br />
+LDA #$ff ;Load white<br />
+STA 1017 ;Write white to the pixel location<br />
+JMP finishInterrupt ;and finish the Interrupt<br />
+pressD: ;Turn D on<br />
+LDA #1<br />
+STA dPressed ;Set the variable to 1<br />
+LDA #224 ;Load red<br />
+STA 1017 ;And write red to the pixel location<br />
+JMP finishInterrupt ;and finish the Interrupt<br />
+<br />
+turnOn: ;ON! needs to turn on<br />
+LDA #1<br />
+STA turnedOn ;First set the on variable to 1<br />
+LDX #1 ;Then set X to 1 to move past the color data<br />
+LDA onData ;Load the color (red) into A<br />
+drawOn: ;And draw the pixels<br />
+STA (&lt;onData,X)<br />
+INX ;Increment X once and check if it's null<br />
+LDY onData,X<br />
+INX<br />
+CPY #00<br />
+BNE drawOn ;If it's not null, draw the next pixel<br />
+LDY onData,X ;If it is null, load the next byte and check if it's also null<br />
+CPY #00<br />
+BNE drawOn<br />
+JMP done<br />
+<br />
+turnOff: ;ON! needs to turn off<br />
+LDA #0<br />
+STA turnedOn<br />
+LDX #1<br />
+LDA #0<br />
+JMP drawOn<br />
+<br />
+org $fffe ;$fffe stores the location of the interrupt handler<br />
+.dw keyboardHandler
+</code>
+</div>
+
+<div id="pixeltestexamplediv" class="codepage" style="display: none;">
+<code id="pixeltestexample">
+<b><span style="color: #FF0000;">;**This program requires the keyboard be set to memory-mapped.  Be sure to set the radio button so that the program operates correctly.**<br /></span></b>
+<br />
+;This progam is simple a test of the virtual screen device.  It draws random colors to each pixel of the screen.  Press any alpha-numeric key on the keboard to reset the colors.<br />
+<br />
+loadColor LDA $fe<br />
+STA $0200,X<br />
+INX<br />
+CPX #$FF<br />
+BNE loadColor<br />
+<br />
+loadColorTwo LDA $fe<br />
+STA $02FF,X<br />
+INX<br />
+CPX #$FF<br />
+BNE loadColorTwo<br />
+<br />
+loadColorThree LDA $fe<br />
+STA $03FE,X<br />
+INX<br />
+CPX #$FF<br />
+BNE loadColorThree<br />
+<br />
+loadColorFour LDA $fe<br />
+STA $04FE,X<br />
+INX<br />
+CPX #$FF<br />
+BNE loadColorFour<br />
+<br />
+loadColorFive LDA $fe<br />
+STA $05FE,X<br />
+INX<br />
+CPX #$b2<br />
+BNE loadColorFive<br />
+<br />
+LDA #0<br />
+STA $06e4<br />
+<br />
+loop:<br />
+LDA $06e4<br />
+BEQ loop<br />
+JMP loadColor
+</code>
+</div>
+
+<div id="reverselettersexamplediv" class="codepage" style="display: none;">
+<code id="reverselettersexample">
+;This program uses the additional IN and OUT instructions to input and output text.<br />
+<br /> 
+inputLocation equ $0701<br />
+enterNameCheck equ $0700<br />
+<br />
+ldx #0<br />
+stx enterNameCheck<br />
+printChar:<br />
+lda hithere,x<br />
+beq Input<br />
+inx<br />
+out<br />
+jmp printChar<br />
+<br />
+Input:<br />
+ldx #0<br />
+in<br />
+beq printPlease<br />
+jmp storeInput<br />
+getInput:<br />
+in<br />
+storeInput:<br />
+sta inputLocation,X<br />
+beq niceToMeetYou<br />
+inx<br />
+jmp getInput<br />
+<br />
+printPlease<br />
+ldx enterNameCheck<br />
+cpx #1<br />
+beq noName<br />
+ldx #1<br />
+stx enterNameCheck<br />
+ldx #0<br />
+pPlease:<br />
+lda entername,X<br />
+beq Input<br />
+out<br />
+inx<br />
+jmp pPlease<br />
+<br />
+<br />
+niceToMeetYou:<br />
+ldx #0<br />
+printnice:<br />
+lda nicetomeet,X<br />
+beq printInput<br />
+out<br />
+inx<br />
+jmp printnice<br />
+<br />
+printInput:<br />
+ldx #0<br />
+pInput:<br />
+lda inputLocation,X<br />
+beq inAMirror<br />
+out<br />
+inx<br />
+jmp pInput<br />
+<br />
+inAMirror:<br />
+ldx #0<br />
+pinAMirror:<br />
+lda mirror,X<br />
+cmp #0<br />
+beq done<br />
+out<br />
+inx<br />
+jmp pinAMirror<br />
+<br />
+done:<br />
+ldx #0<br />
+printReverse:<br />
+txa<br />
+pha<br />
+lda inputLocation,X<br />
+cmp #65<br />
+bcc badLetter<br />
+cmp #123<br />
+bcs badLetter<br />
+cmp #91<br />
+bcs checkLowerCase<br />
+adc #33<br />
+jmp subtract<br />
+checkLowerCase: cmp #97<br />
+bcc badLetter<br />
+subtract sbc #97<br />
+tax<br />
+ldy reverselettersL,X<br />
+lda reverselettersH,X<br />
+ouy<br />
+jmp goOn<br />
+badLetter:<br />
+out<br />
+goOn: pla<br />
+tax<br />
+nextLetter inx<br />
+lda inputLocation,X<br />
+cmp #0<br />
+bne printReverse<br />
+ex:<br />
+lda excl<br />
+out<br />
+finished: hlt<br />
+<br />
+<br />
+noName:<br />
+ldx #0<br />
+printNoName:<br />
+lda noNameStr,X<br />
+cmp #0<br />
+beq finished<br />
+out<br />
+inx<br />
+jmp printNoName<br />
+<br />
+<br />
+org $8300<br />
+reverselettersL:<br />
+.db $52,$64,$54,$62,$58,$87,$eb,$9c,$69,$b1,$9e,$6c,$6d,$6e,$6f,$71,$70,$a8,$73,$9a,$75,$76,$77,$78,$79,$7a<br />
+reverselettersH:<br />
+.db $02,$00,$02,$00,$02,$02,$01,$02,$00,$10,$02,$00,$00,$00,$00,$00,$00,$01,$00,$01,$00,$00,$00,$00,$00,$00<br />
+<br />
+hithere: .db "Hi there. What's your name?",13,0<br />
+nicetomeet: .db "Nice to meet you",44,32,0<br />
+mirror: .db ".",13,13,"In a mirror your name might look like ",0<br />
+excl: .db "!",0<br />
+entername: .db "Please tell me your name!",13,0<br />
+noNameStr: .db "Okay",44," you don","'","t have to tell me.  I guess you don't like talking to computers.",0<br />
+</code>
+</div>
+
+<div id="moduloExampleDiv" class="codepage" style="display: none;">
+<code id="moduloExample">
+;This is a short routine to calculate the result of a modulo operation.<br />
+;Set the dividend and divisor to desired values, and after running the program the Accumulator will store the result.<br />
+;I.e. 126 % 16 = 14.<br />
+;<br />
+;Note that since the 6502 is an 8-bit processor, the input values must be 255 or less.  Also keep in mind that the Accumulator result will be displayed in hexadecimal.<br/>
+<br />
+dividend = 126<br />
+divisor = 16<br />
+<br />
+LDA #dividend<br />
+SEC<br />
+subtract:<br />
+SBC #divisor<br />
+BCS subtract<br />
+<br />
+ADC #divisor<br />
+HLT<br />
+</code>
+</div>
+
+<div id="stringSubroutineExampleDiv" class="codepage" style="display: none;">
+<code id="stringSubroutineExample">
+<b><span style="color: #FF0000;">;**This program requires the keyboard be set to memory-mapped.  Be sure to set the radio button so that the program operates correctly.**<br /></span></b>
+;<br />
+;This example demonstrates the use of pointers and subroutines.<br />
+;This program uses one section of code called subPrint in order to print multiple different strings.<br />
+;The strings are stored in memory, and when it's needed to print one of them, the location of the desired string is stored in the ptr variable.<br />
+;Then JSR subPrint is called, and the routine prints the string at the location ptr.<br />
+;This demonstrates how subroutines can be used to save memory; it would cost enormous amounts of memory to repeat the printing function each time a string needed to be printed.<br />
+<br />
+<br />
+org $0000<br/>
+ptr	.dw 0; ;ptr points to the address of the string to be printed.<br />
+	.dw str, str2 ;$00-01 stores the address of the first string, $02-03 stores the address of the second.<br />
+<br />
+org $8000 ;We'll put our data at $8000,<br />
+str	.db "Press any key to continue...",0 ;First string, plus null<br />
+str2	.db 13,"You pressed a key!",0 ;Second string, plus null<br />
+
+org $0800 ;Program code begins here.<br />
+	LDA $02 ;Load the low byte of str<br />
+	STA ptr ;Store it in the pointer low byte<br />
+	LDA $03 ;Load the high byte of str<br />
+	STA ptr+1 ;Store it in the pointer high byte<br />
+	LDY #0 ;Set the offset to zero<br />
+	JSR subPrint ;Call the print subroutine<br />
+<br />
+loop	LDA $06e4 ;Wait for a keypress...<br />
+	BEQ loop<br />
+<br />
+	LDA $04 ;Load the low byte of str2<br />
+	STA ptr ;Store it in the pointer low byte<br />
+	LDA $05 ;Load the high byte of str2<br />
+	STA ptr+1 ;Store it in the high byte of ptr<br />
+	LDY #0 ;Set the offset to zero<br />
+	JSR subPrint ;Call the print subroutine<br />
+	HLT<br />
+<br />
+subPrint<br />
+	LDA (ptr),Y ;Load the character<br />
+	BEQ return ;If it's null, end the subroutine<br />
+	OUT ;Otherwise, print it<br />
+	INY ;Increment the pointer,<br />
+	JMP subPrint ;And loop back<br />
+return	RTS
+</code>
+</div>
+
+</div>
+
+
+
+</div>
+
+</div>
+
+</div>
+<div id="footer">
+<span style="font-size: larger; font-weight: bold;">Assembler Syntax:</span><br />
+This assembler supports standard 6502 assembly syntax.  Hexadecimal values are prefixed with $, binary values are prefixed with % and values with no prefix are treated as decimal.
+Immediate values are prefixed with # and indexed values are postfixed with ,X or ,Y.<br />
+<br />
+Constants can be assigned in three ways:<br />
+<code>
+<br />
+constant = $00<br />
+constant equ $ff<br />
+define constant $7f<br />
+<br />
+</code>
+The assembler supports three directives: .org, .db, and .dw.<br />.org sets the memory location for any code after it:<br />
+<code>
+<br />
+.org $0000<br />
+LDA #00<br />
+.org $8000<br />
+INX<br />
+<br />
+</code>
+This code will store the LDA #00 instruction at memory location $0000, and the INX instruction at $8000.<br />
+The .db and .dw directives are used to declare literal bytes and literal words:<br />
+<code>
+<br />
+.org $0400<br />
+.db $ff,$ee,$fe<br />
+.dw $bbaa<br />
+<br />
+</code>
+This code will store $ff at $0400, $ee at $0401, and $fe at $0402.  The 6502 is a little-endian processor, so it will store $aa at $0403 and $bb at $0404.<br />
+The .db directive can also take string values:<br />
+<code>
+<br />
+.db "Hello world!",0<br />
+<br />
+</code>
+This will store each of the ASCII values of the string, i.e. $48, $65, $6c, ..., followed by a null byte.<br />
+The assembler also accepts labels:<br />
+<code>
+<br />
+LDA #$80<br />
+loop SEC<br />
+SBC #$01<br />
+BNE loop<br />
+JMP finished<br />
+<br />
+finished: HLT<br />
+<br />
+</code>
+Labels can also be used as operand to instructions:<br />
+<code>
+<br />
+.org $0700<br />
+data: .db "Hello world!",0<br />
+<br />
+.org $0800<br />
+LDX #0<br />
+LDA data,X<br />
+<br />
+</code>
+This will load into the Accumulator the first byte of the string, from memory location $0700.<br />
+If a label is used with the indirect-indexed or indexed-indirect addressing mode, only the low byte of the label will be used.<br />
+The low or high byte of a label can be manually specified with &lt; and &gt; respectively:<br />
+<code>
+<br />
+.org $0700<br />
+data: .db "Hello world!",0<br />
+<br />
+.org $0800<br />
+LDX #0<br />
+LDA (&lt;data,X)<br />
+LDA (&gt;data,X)<br />
+<br />
+The first LDA instruction will dereference to memory location $00 (the low byte of $0700), and the second will dereference to memory location $07.<br />
+</code>
+Constants can be defined in terms of other constants, as long as they are defined in order throughout the code.  This code is valid:<br />
+<code>
+<br />
+const_A = $55<br />
+const_B = const_A<br />
+<br />
+LDA #const_B<br />
+<br />
+</code>
+But this code may not work correctly:<br />
+<code>
+<br />
+const_B = const_A<br />
+const_A = $55<br />
+<br />
+</code>
+Addition and subtraction can be performed on constants and labels:<br />
+<code>
+<br />
+const_A = $55<br />
+const_B = const_A + $23<br />
+<br />
+.org $0050<br />
+data: .db $55,$56,$57,"Hello!",0 ;The string begins at memory location $0053.<br />
+<br />
+.org $0300<br />
+hello: .dw data+3 ;This stores the location of the string "Hello!", i.e. $53 and $00.<br />
+<br />
+.org $0800<br />
+LDA #const_B ;Loads $78.<br />
+LDA $0300 ;Loads the low byte of the location of the string, i.e. $53.<br />
+LDA $0301 ;Loads the high byte of the location of the string, i.e. $00.<br />
+LDA hello ;Loads the low byte, same as $0300.<br />
+LDA hello+1 ;Loads the high byte, same as $0301.<br />
+<br />
+</code>
+Constants can be defined in terms of a label, but the high and low byte cannot be used, nor can addition and subtraction:<br />
+<code>
+<br />
+const = data + 3<br />
+<br />
+.org $0050<br />
+data: .db $23,$44,$78,"Hello!",0<br />
+<br />
+.org $0800<br />
+LDX #2<br />
+LDA const,X ;Loads "l", i.e. $6c.<br />
+LDA &lt;const ;INVALID<br />
+LDA const+1,X ;INVALID<br />
+LDA data+4 ;Valid, loads "e", i.e. $65.<br />
+<br />
+</code>
+Spaces can be used when performing addition and subtraction while defining constants, but not for instruction operands:<br />
+<code>
+<br />
+const = data + 3 ;Valid.<br />
+<br />
+LDA data + 3 ;INVALID<br />
+LDA data+3 ;Valid.<br />
+<br />
+</code>
+Instructions may be put on the same line; a line break is only needed after a comment and after .db or .dw.  Comments are marked with a semicolon:<br />
+<code>
+<br />
+const_A = $50 ;const_A stores a constant value.<br />
+<br />
+LDA #$65 NOP NOP NOP OUT HLT<br />
+<br />
+data: .db $56, $65 ;Data<br />
+<br />
+</code>
+</div>
+<script src="6502sim.js" id="js"></script>
+<script src="6502sim_page.js"></script>
+  </body>
+</html>

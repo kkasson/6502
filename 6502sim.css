@@ -1,0 +1,111 @@
+body {
+  min-width: 1200px;         /* 2 x LC width + RC width */
+
+}
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #D6DCED;
+  color: #63666E;
+}
+
+.container {
+  width: 100%;
+}
+
+.column {
+  width: 29.33333333%;
+  padding-left: 2%;
+  padding-right: 2%;
+  float: left;
+}
+
+#output {
+  display: inline-block;
+  font-family: monospace;
+  word-wrap: break-word;
+  overflow: auto;
+  resize: vertical;
+  border: 1px solid gray;
+  width: calc(97% - 160px);
+  background-color: #111111;
+  height: 120px;
+  color: #FFF000;
+}
+#statuswindow {
+  font-family: monospace;
+  overflow: auto;
+  resize: vertical;
+  border: 1px solid gray;
+  width: 100%;
+  background-color: #EBEBE4;
+  height: 76px;
+}
+
+.debugBox {
+  width: 100%;
+  background-color: #FFFFFF;
+  font-family: monospace;
+  border: 1px solid black;
+}
+
+.debugOptions {
+  font-family: monospace;
+}
+span { 
+  font-family: monospace;
+}
+div {
+  font-family: monospace;
+}
+input { 
+  font-family: monospace;
+}
+.navList {
+  list-style-type: none;
+  margin: 0 3% 0 0;
+  padding: 0;
+}
+.navButton {
+  border-radius: 5px;
+  font-size: 12px;
+  float: left;
+  font-family: monospace;
+  list-style: none;
+  text-align: center;
+  background-color: #637FC7;
+  color: #1D253A;
+  width: 27.33333%;
+  margin-left: 3%;
+  margin-right: 3%;
+}
+.navButton:hover {
+ background-color: #122B6E;
+ color: #A8ADBA;
+ cursor: pointer;
+}
+.navClicked {
+ background-color: #122B6E !important;
+ color: #A8ADBA !important;
+}
+.codepage {
+  word-wrap: break-word;
+  overflow: auto;
+  height: 60%;
+  border: 1px solid gray;
+}
+.codepagetable {
+  border: 0px;
+  width: 100%;
+}
+.codepagetable tr {
+  width: 100%;
+}
+.codepage td {
+  width: 50%;
+}
+#footer {
+  clear: both;
+}
