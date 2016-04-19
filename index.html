@@ -429,6 +429,7 @@ enterNameCheck equ $0700<br />
 <br />
 ldx #0<br />
 stx enterNameCheck<br />
+stx inputLocation<br />
 printChar:<br />
 lda hithere,x<br />
 beq Input<br />
@@ -437,7 +438,7 @@ out<br />
 jmp printChar<br />
 <br />
 Input:<br />
-ldx #0<br />
+ldx #1<br />
 in<br />
 beq printPlease<br />
 jmp storeInput<br />
@@ -465,6 +466,8 @@ jmp pPlease<br />
 <br />
 <br />
 niceToMeetYou:<br />
+txa<br />
+pha<br />
 ldx #0<br />
 printnice:<br />
 lda nicetomeet,X<br />
@@ -474,7 +477,7 @@ inx<br />
 jmp printnice<br />
 <br />
 printInput:<br />
-ldx #0<br />
+ldx #1<br />
 pInput:<br />
 lda inputLocation,X<br />
 beq inAMirror<br />
@@ -493,7 +496,8 @@ inx<br />
 jmp pinAMirror<br />
 <br />
 done:<br />
-ldx #0<br />
+pla
+tax<br />
 printReverse:<br />
 txa<br />
 pha<br />
@@ -518,7 +522,7 @@ badLetter:<br />
 out<br />
 goOn: pla<br />
 tax<br />
-nextLetter inx<br />
+nextLetter dex<br />
 lda inputLocation,X<br />
 cmp #0<br />
 bne printReverse<br />
