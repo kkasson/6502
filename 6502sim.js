@@ -18,7 +18,7 @@ $06B0 - Writing anything to this location clears the screen
 $06B1 - Memory Mapped Sound device - Beeps when anything is written to it.
 $06B2 - $06DF - Reserved for Memory Mapped Devices
 $06E0 - $06EF - Memory Mapped to keyboard - $06E0 is left key, $06E1 up, $06E2 right, $06E3 down, $06E4 enter.
-$06F0 - $06F2 - Memmory Mapped to mouse - $06F0 is left button, $06F1 is right button, $06F2 is middle button.
+$06F0 - $06F2 - Memory Mapped to mouse - $06F0 is left button, $06F1 is right button, $06F2 is middle button.
 $06F3 - $06FF - Reserved.
 $0700 to $7FFF - RAM
 $8000 to $FFFF - Program code.  Program execution begins at $8000.
