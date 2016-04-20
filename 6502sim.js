@@ -28,7 +28,7 @@ $FFFE to $FFFF - Stores location of BRK handler routine
 */
 
 //Exception Definitions:
-var exceptions = { //Thist variable is an object which contains all the exception messages.  The exceptions could just be defined as functions without this object, but it adds a little clarity to call it exception.labelNotFound instead of just labelNotFound
+var exceptions = { //This variable is an object which contains all the exception messages.  The exceptions could just be defined as functions without this object, but it adds a little clarity to call it exception.labelNotFound instead of just labelNotFound
   labelNotFound: function (label,branch = false) { this.num = (branch ? 2 : 1); this.message = "Could not resolve " + (branch ? "branch " : "") + "label \"" + label + "\"."; },
   branchOutOfRange: function (label,range) { this.num = 3; this.message = "Branch label \"" + label + "\" is out of range: " + range + "."; },
   operandTypeError: function (operand,type,command) { this.num = 4; this.message = "Invalid operand type for instruction " + command + ".  Operand: " + operand + "."; },
